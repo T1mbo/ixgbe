@@ -1,5 +1,26 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2021 Intel Corporation. */
+/*******************************************************************************
+
+  Intel(R) 10GbE PCI Express Linux Network Driver
+  Copyright(c) 1999 - 2017 Intel Corporation.
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Contact Information:
+  Linux NICS <linux.nics@intel.com>
+  e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
+  Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+
+*******************************************************************************/
 
 #include <linux/types.h>
 #include <linux/module.h>
@@ -48,6 +69,8 @@
 	MODULE_PARM_DESC(X, desc);
 #endif
 
+IXGBE_PARAM(EEE, "Energy Efficient Ethernet (EEE) ,0=disabled, 1=enabled )"
+	    "default EEE disable");
 /* IntMode (Interrupt Mode)
  *
  * Valid Range: 0-2
@@ -57,14 +80,13 @@
  *
  * Default Value: 2
  */
+IXGBE_PARAM(InterruptType, "Change Interrupt Mode (0=Legacy, 1=MSI, 2=MSI-X), "
+	    "default IntMode (deprecated)");
 IXGBE_PARAM(IntMode, "Change Interrupt Mode (0=Legacy, 1=MSI, 2=MSI-X), "
 	    "default 2");
 #define IXGBE_INT_LEGACY		0
 #define IXGBE_INT_MSI			1
 #define IXGBE_INT_MSIX			2
-
-IXGBE_PARAM(InterruptType, "Change Interrupt Mode (0=Legacy, 1=MSI, 2=MSI-X), "
-	    "default IntMode (deprecated)");
 
 /* MQ - Multiple Queue enable/disable
  *
@@ -117,7 +139,6 @@ IXGBE_PARAM(DCA, "Disable or enable Direct Cache Access, 0=disabled, "
 
 IXGBE_PARAM(RSS, "Number of Receive-Side Scaling Descriptor Queues, "
 	    "default 0=number of cpus");
-
 
 /* VMDQ - Virtual Machine Device Queues (VMDQ)
  *
@@ -352,20 +373,13 @@ struct ixgbe_option {
 #ifndef IXGBE_NO_LLI
 #ifdef module_param_array
 /**
- * ixgbe_lli_supported - helper function to determine LLI support
- * @adapter: board private structure
- * @opt: pointer to option struct
+ *  helper function to determine LLI support
  *
- * LLI is only supported for 82599 and X540
- * LLIPush is not supported on 82599
+ *  LLI is only supported for 82599 and X540
+ *  LLIPush is not supported on 82599
  **/
-#ifdef HAVE_CONFIG_HOTPLUG
 static bool __devinit ixgbe_lli_supported(struct ixgbe_adapter *adapter,
 					  struct ixgbe_option *opt)
-#else
-static bool ixgbe_lli_supported(struct ixgbe_adapter *adapter,
-				struct ixgbe_option *opt)
-#endif
 {
 	struct ixgbe_hw *hw = &adapter->hw;
 
@@ -387,19 +401,12 @@ not_supp:
 #endif /* module_param_array */
 #endif /* IXGBE_NO_LLI */
 
-#ifdef HAVE_CONFIG_HOTPLUG
-static int __devinit ixgbe_validate_option(struct net_device *netdev,
-					   unsigned int *value,
+static int __devinit ixgbe_validate_option(unsigned int *value,
 					   struct ixgbe_option *opt)
-#else
-static int ixgbe_validate_option(struct net_device *netdev,
-				 unsigned int *value,
-				 struct ixgbe_option *opt)
-#endif
 {
 	if (*value == OPTION_UNSET) {
-		netdev_info(netdev, "Invalid %s specified (%d),  %s\n",
-			    opt->name, *value, opt->err);
+		printk(KERN_INFO "ixgbe: Invalid %s specified (%d),  %s\n",
+			opt->name, *value, opt->err);
 		*value = opt->def;
 		return 0;
 	}
@@ -408,10 +415,10 @@ static int ixgbe_validate_option(struct net_device *netdev,
 	case enable_option:
 		switch (*value) {
 		case OPTION_ENABLED:
-			netdev_info(netdev, "%s Enabled\n", opt->name);
+			printk(KERN_INFO "ixgbe: %s Enabled\n", opt->name);
 			return 0;
 		case OPTION_DISABLED:
-			netdev_info(netdev, "%s Disabled\n", opt->name);
+			printk(KERN_INFO "ixgbe: %s Disabled\n", opt->name);
 			return 0;
 		}
 		break;
@@ -419,11 +426,11 @@ static int ixgbe_validate_option(struct net_device *netdev,
 		if ((*value >= opt->arg.r.min && *value <= opt->arg.r.max) ||
 		    *value == opt->def) {
 			if (opt->msg)
-				netdev_info(netdev, "%s set to %d, %s\n",
-					    opt->name, *value, opt->msg);
+				printk(KERN_INFO "ixgbe: %s set to %d, %s\n",
+				       opt->name, *value, opt->msg);
 			else
-				netdev_info(netdev, "%s set to %d\n",
-					    opt->name, *value);
+				printk(KERN_INFO "ixgbe: %s set to %d\n",
+				       opt->name, *value);
 			return 0;
 		}
 		break;
@@ -434,7 +441,7 @@ static int ixgbe_validate_option(struct net_device *netdev,
 			const struct ixgbe_opt_list *ent = &opt->arg.l.p[i];
 			if (*value == ent->i) {
 				if (ent->str[0] != '\0')
-					netdev_info(netdev, "%s\n", ent->str);
+					printk(KERN_INFO "%s\n", ent->str);
 				return 0;
 			}
 		}
@@ -444,14 +451,13 @@ static int ixgbe_validate_option(struct net_device *netdev,
 		BUG();
 	}
 
-	netdev_info(netdev, "Invalid %s specified (%d),  %s\n",
-		    opt->name, *value, opt->err);
+	printk(KERN_INFO "ixgbe: Invalid %s specified (%d),  %s\n",
+	       opt->name, *value, opt->err);
 	*value = opt->def;
 	return -1;
 }
 
 #define LIST_LEN(l) (sizeof(l) / sizeof(l[0]))
-#define PSTR_LEN 10
 
 /**
  * ixgbe_check_options - Range Checking for Command Line Parameters
@@ -462,11 +468,7 @@ static int ixgbe_validate_option(struct net_device *netdev,
  * value exists, a default value is used.  The final value is stored
  * in a variable in the adapter structure.
  **/
-#ifdef HAVE_CONFIG_HOTPLUG
 void __devinit ixgbe_check_options(struct ixgbe_adapter *adapter)
-#else
-void ixgbe_check_options(struct ixgbe_adapter *adapter)
-#endif
 {
 	unsigned int mdd;
 	int bd = adapter->bd_number;
@@ -475,15 +477,13 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 	unsigned int vmdq;
 
 	if (bd >= IXGBE_MAX_NIC) {
-		netdev_notice(adapter->netdev,
-			      "Warning: no configuration for board #%d\n", bd);
-		netdev_notice(adapter->netdev,
-			      "Using defaults for all values\n");
+		printk(KERN_NOTICE
+		       "Warning: no configuration for board #%d\n", bd);
+		printk(KERN_NOTICE "Using defaults for all values\n");
 #ifndef module_param_array
 		bd = IXGBE_MAX_NIC;
 #endif
 	}
-
 
 	{ /* Interrupt Mode */
 		unsigned int int_mode;
@@ -503,20 +503,19 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 			int_mode = IntMode[bd];
 			if (int_mode == OPTION_UNSET)
 				int_mode = InterruptType[bd];
-			ixgbe_validate_option(adapter->netdev,
-					      &int_mode, &opt);
+			ixgbe_validate_option(&int_mode, &opt);
 			switch (int_mode) {
 			case IXGBE_INT_MSIX:
 				if (!(*aflags & IXGBE_FLAG_MSIX_CAPABLE))
-					netdev_info(adapter->netdev,
-						    "Ignoring MSI-X setting; "
-						    "support unavailable\n");
+					printk(KERN_INFO
+					       "Ignoring MSI-X setting; "
+					       "support unavailable\n");
 				break;
 			case IXGBE_INT_MSI:
 				if (!(*aflags & IXGBE_FLAG_MSI_CAPABLE)) {
-					netdev_info(adapter->netdev,
-						    "Ignoring MSI setting; "
-						    "support unavailable\n");
+					printk(KERN_INFO
+					       "Ignoring MSI setting; "
+					       "support unavailable\n");
 				} else {
 					*aflags &= ~IXGBE_FLAG_MSIX_CAPABLE;
 				}
@@ -551,7 +550,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 		if (num_MQ > bd) {
 #endif
 			unsigned int mq = MQ[bd];
-			ixgbe_validate_option(adapter->netdev, &mq, &opt);
+			ixgbe_validate_option(&mq, &opt);
 			if (mq)
 				*aflags |= IXGBE_FLAG_MQ_CAPABLE;
 			else
@@ -586,7 +585,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 		if (num_DCA > bd) {
 #endif
 			dca = DCA[bd];
-			ixgbe_validate_option(adapter->netdev, &dca, &opt);
+			ixgbe_validate_option(&dca, &opt);
 			if (!dca)
 				*aflags &= ~IXGBE_FLAG_DCA_CAPABLE;
 
@@ -629,7 +628,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #ifdef module_param_array
 		if (num_RSS > bd) {
 #endif
-			ixgbe_validate_option(adapter->netdev, &rss, &opt);
+			ixgbe_validate_option(&rss, &opt);
 			/* base it off num_online_cpus() with hardware limit */
 			if (!rss)
 				rss = min_t(int, opt.arg.r.max,
@@ -680,7 +679,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			vmdq = VMDQ[bd];
 
-			ixgbe_validate_option(adapter->netdev, &vmdq, &opt);
+			ixgbe_validate_option(&vmdq, &opt);
 
 			/* zero or one both mean disabled from our driver's
 			 * perspective */
@@ -727,8 +726,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 		if (num_max_vfs > bd) {
 #endif
 			unsigned int vfs = max_vfs[bd];
-			if (ixgbe_validate_option(adapter->netdev,
-						  &vfs, &opt)) {
+			if (ixgbe_validate_option(&vfs, &opt)) {
 				vfs = 0;
 				DPRINTK(PROBE, INFO,
 					"max_vfs out of range "
@@ -785,7 +783,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 		if (num_VEPA > bd) {
 #endif
 			unsigned int vepa = VEPA[bd];
-			ixgbe_validate_option(adapter->netdev, &vepa, &opt);
+			ixgbe_validate_option(&vepa, &opt);
 			if (vepa)
 				adapter->flags |=
 					IXGBE_FLAG_SRIOV_VEPA_BRIDGE_MODE;
@@ -824,8 +822,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 				adapter->rx_itr_setting = 1;
 				break;
 			default:
-				ixgbe_validate_option(adapter->netdev,
-						      &itr, &opt);
+				ixgbe_validate_option(&itr, &opt);
 				/* the first bit is used as control */
 				adapter->rx_itr_setting = (1000000/itr) << 2;
 				break;
@@ -855,8 +852,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			adapter->lli_port = LLIPort[bd];
 			if (adapter->lli_port) {
-				ixgbe_validate_option(adapter->netdev,
-						      &adapter->lli_port, &opt);
+				ixgbe_validate_option(&adapter->lli_port, &opt);
 			} else {
 				DPRINTK(PROBE, INFO, "%s turned off\n",
 					opt.name);
@@ -883,8 +879,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			adapter->lli_size = LLISize[bd];
 			if (adapter->lli_size) {
-				ixgbe_validate_option(adapter->netdev,
-						      &adapter->lli_size, &opt);
+				ixgbe_validate_option(&adapter->lli_size, &opt);
 			} else {
 				DPRINTK(PROBE, INFO, "%s turned off\n",
 					opt.name);
@@ -908,8 +903,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			unsigned int lli_push = LLIPush[bd];
 
-			ixgbe_validate_option(adapter->netdev,
-					      &lli_push, &opt);
+			ixgbe_validate_option(&lli_push, &opt);
 			if (lli_push)
 				*aflags |= IXGBE_FLAG_LLI_PUSH;
 			else
@@ -937,8 +931,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			adapter->lli_etype = LLIEType[bd];
 			if (adapter->lli_etype) {
-				ixgbe_validate_option(adapter->netdev,
-						      &adapter->lli_etype,
+				ixgbe_validate_option(&adapter->lli_etype,
 						      &opt);
 			} else {
 				DPRINTK(PROBE, INFO, "%s turned off\n",
@@ -967,8 +960,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			adapter->lli_vlan_pri = LLIVLANP[bd];
 			if (adapter->lli_vlan_pri) {
-				ixgbe_validate_option(adapter->netdev,
-						      &adapter->lli_vlan_pri,
+				ixgbe_validate_option(&adapter->lli_vlan_pri,
 						      &opt);
 			} else {
 				DPRINTK(PROBE, INFO, "%s turned off\n",
@@ -993,27 +985,26 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 			.arg = {.r = {.min = IXGBE_FDIR_PBALLOC_64K,
 				      .max = IXGBE_FDIR_PBALLOC_256K} }
 		};
-		char pstring[PSTR_LEN];
+		char pstring[10];
 
 		if (adapter->hw.mac.type == ixgbe_mac_82598EB) {
 			adapter->fdir_pballoc = IXGBE_FDIR_PBALLOC_NONE;
 		} else if (num_FdirPballoc > bd) {
 			fdir_pballoc_mode = FdirPballoc[bd];
-			ixgbe_validate_option(adapter->netdev,
-					      &fdir_pballoc_mode, &opt);
+			ixgbe_validate_option(&fdir_pballoc_mode, &opt);
 			switch (fdir_pballoc_mode) {
 			case IXGBE_FDIR_PBALLOC_256K:
 				adapter->fdir_pballoc = IXGBE_FDIR_PBALLOC_256K;
-				snprintf(pstring, PSTR_LEN, "256kB");
+				sprintf(pstring, "256kB");
 				break;
 			case IXGBE_FDIR_PBALLOC_128K:
 				adapter->fdir_pballoc = IXGBE_FDIR_PBALLOC_128K;
-				snprintf(pstring, PSTR_LEN, "128kB");
+				sprintf(pstring, "128kB");
 				break;
 			case IXGBE_FDIR_PBALLOC_64K:
 			default:
 				adapter->fdir_pballoc = IXGBE_FDIR_PBALLOC_64K;
-				snprintf(pstring, PSTR_LEN, "64kB");
+				sprintf(pstring, "64kB");
 				break;
 			}
 			DPRINTK(PROBE, INFO, "Flow Director will be allocated "
@@ -1042,8 +1033,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 			adapter->atr_sample_rate = AtrSampleRate[bd];
 
 			if (adapter->atr_sample_rate) {
-				ixgbe_validate_option(adapter->netdev,
-						      &adapter->atr_sample_rate,
+				ixgbe_validate_option(&adapter->atr_sample_rate,
 						      &opt);
 				DPRINTK(PROBE, INFO, "%s %d\n", atr_string,
 					adapter->atr_sample_rate);
@@ -1072,8 +1062,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 				unsigned int fcoe = FCoE[bd];
 
-				ixgbe_validate_option(adapter->netdev,
-						      &fcoe, &opt);
+				ixgbe_validate_option(&fcoe, &opt);
 				if (fcoe)
 					*aflags |= IXGBE_FLAG_FCOE_CAPABLE;
 #ifdef module_param_array
@@ -1108,7 +1097,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 		if (num_LRO > bd) {
 #endif
 			unsigned int lro = LRO[bd];
-			ixgbe_validate_option(adapter->netdev, &lro, &opt);
+			ixgbe_validate_option(&lro, &opt);
 			if (lro)
 				netdev->features |= NETIF_F_LRO;
 			else
@@ -1141,8 +1130,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			unsigned int enable_unsupported_sfp =
 						      allow_unsupported_sfp[bd];
-			ixgbe_validate_option(adapter->netdev,
-					      &enable_unsupported_sfp, &opt);
+			ixgbe_validate_option(&enable_unsupported_sfp, &opt);
 			if (enable_unsupported_sfp) {
 				adapter->hw.allow_unsupported_sfp = true;
 			} else {
@@ -1185,7 +1173,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			unsigned int dmac_wd = dmac_watchdog[bd];
 
-			ixgbe_validate_option(adapter->netdev, &dmac_wd, &opt);
+			ixgbe_validate_option(&dmac_wd, &opt);
 			adapter->hw.mac.dmac_config.watchdog_timer = dmac_wd;
 #ifdef module_param_array
 		} else {
@@ -1215,8 +1203,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 #endif
 			unsigned int enable_vxlan_rx = vxlan_rx[bd];
 
-			ixgbe_validate_option(adapter->netdev,
-					      &enable_vxlan_rx, &opt);
+			ixgbe_validate_option(&enable_vxlan_rx, &opt);
 			if (enable_vxlan_rx)
 				adapter->flags |= flag;
 			else
@@ -1246,8 +1233,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 			if (num_MDD > bd) {
 #endif
 				mdd = MDD[bd];
-				ixgbe_validate_option(adapter->netdev,
-						      &mdd, &opt);
+				ixgbe_validate_option(&mdd, &opt);
 
 				if (mdd){
 					*aflags |= IXGBE_FLAG_MDD_ENABLED;
@@ -1266,4 +1252,5 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 			break;
 		}
 	}
+
 }

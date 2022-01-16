@@ -1,7 +1,27 @@
-# SPDX-License-Identifier: GPL-2.0
-# Copyright(c) 1999 - 2021 Intel Corporation.
-
+################################################################################
 #
+# Intel(R) 10GbE PCI Express Linux Network Driver
+# Copyright(c) 1999 - 2017 Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# The full GNU General Public License is included in this distribution in
+# the file called "COPYING".
+#
+# Contact Information:
+# Linux NICS <linux.nics@intel.com>
+# e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
+# Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+#
+################################################################################
+
 # common Makefile rules useful for out-of-tree Linux driver builds
 #
 # Usage: include common.mk
@@ -56,8 +76,8 @@ endif
 
 # Kernel Search Path
 # All the places we look for kernel source
-KSP :=  /lib/modules/${BUILD_KERNEL}/source \
-        /lib/modules/${BUILD_KERNEL}/build \
+KSP :=  /lib/modules/${BUILD_KERNEL}/build \
+        /lib/modules/${BUILD_KERNEL}/source \
         /usr/src/linux-${BUILD_KERNEL} \
         /usr/src/linux-$(${BUILD_KERNEL} | sed 's/-.*//') \
         /usr/src/kernel-headers-${BUILD_KERNEL} \
@@ -107,10 +127,10 @@ MSP := ${KSRC}/System.map \
        /boot/System.map-${BUILD_KERNEL}
 
 # prune the lists down to only files that exist
-test_file = $(shell [ -f ${1} ] && echo ${1})
-VSP := $(foreach file, ${VSP}, $(call test_file,${file}))
-CSP := $(foreach file, ${CSP}, $(call test_file,${file}))
-MSP := $(foreach file, ${MSP}, $(call test_file,${file}))
+test_file = $(shell [ -f ${file} ] && echo ${file})
+VSP := $(foreach file, ${VSP}, ${test_file})
+CSP := $(foreach file, ${CSP}, ${test_file})
+MSP := $(foreach file, ${MSP}, ${test_file})
 
 
 # and use the first valid entry in the Search Paths
@@ -135,51 +155,7 @@ ifeq (,$(wildcard ${CONFIG_FILE}))
 endif
 
 ifeq (,$(wildcard ${SYSTEM_MAP_FILE}))
-  $(warning Missing System.map file - depmod will not check for missing symbols during module installation)
-endif
-
-ifneq ($(words $(subst :, ,$(CURDIR))), 1)
-  $(error Sources directory '$(CURDIR)' cannot contain spaces nor colons. Rename directory or move sources to another path)
-endif
-
-########################
-# Extract config value #
-########################
-
-get_config_value = $(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
-                           grep -m 1 ${1} | awk '{ print $$3 }')
-
-########################
-# Check module signing #
-########################
-
-CONFIG_MODULE_SIG_ALL := $(call get_config_value,CONFIG_MODULE_SIG_ALL)
-CONFIG_MODULE_SIG_FORCE := $(call get_config_value,CONFIG_MODULE_SIG_FORCE)
-CONFIG_MODULE_SIG_KEY := $(call get_config_value,CONFIG_MODULE_SIG_KEY)
-
-SIG_KEY_SP := ${KOBJ}/${CONFIG_MODULE_SIG_KEY} \
-              ${KOBJ}/certs/signing_key.pem
-
-SIG_KEY_FILE := $(firstword $(foreach file, ${SIG_KEY_SP}, $(call test_file,${file})))
-
-# print a warning if the kernel configuration attempts to sign modules but
-# the signing key can't be found.
-ifneq (${SIG_KEY_FILE},)
-warn_signed_modules := : ;
-else
-warn_signed_modules :=
-ifeq (${CONFIG_MODULE_SIG_ALL},1)
-warn_signed_modules += \
-    echo "*** The target kernel has CONFIG_MODULE_SIG_ALL enabled, but" ; \
-    echo "*** the signing key cannot be found. Module signing has been" ; \
-    echo "*** disabled for this build." ;
-endif # CONFIG_MODULE_SIG_ALL=y
-ifeq (${CONFIG_MODULE_SIG_FORCE},1)
-    echo "warning: The target kernel has CONFIG_MODULE_SIG_FORCE enabled," ; \
-    echo "warning: but the signing key cannot be found. The module must" ; \
-    echo "warning: be signed manually using 'scripts/sign-file'." ;
-endif # CONFIG_MODULE_SIG_FORCE
-DISABLE_MODULE_SIGNING := Yes
+  $(warning Missing System.map file - depmod will not check for missing symbols)
 endif
 
 #######################
@@ -205,21 +181,20 @@ ifneq (${LINUX_VERSION_CODE},)
   EXTRA_CFLAGS += -DLINUX_VERSION_CODE=${LINUX_VERSION_CODE}
 endif
 
-# Determine SLE_KERNEL_REVISION for SuSE SLE >= 11 (needed by kcompat)
+# Determine SLE_LOCALVERSION_CODE for SuSE SLE >= 11 (needed by kcompat)
 # This assumes SuSE will continue setting CONFIG_LOCALVERSION to the string
 # appended to the stable kernel version on which their kernel is based with
 # additional versioning information (up to 3 numbers), a possible abbreviated
 # git SHA1 commit id and a kernel type, e.g. CONFIG_LOCALVERSION=-1.2.3-default
 # or CONFIG_LOCALVERSION=-999.gdeadbee-default
-#
-# SLE_LOCALVERSION_CODE is also exported to support legacy kcompat.h
-# definitions.
-ifeq (1,$(call get_config_value,CONFIG_SUSE_KERNEL))
+ifeq (1,$(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
+          grep -m 1 CONFIG_SUSE_KERNEL | awk '{ print $$3 }'))
 
-ifneq (10,$(call get_config_value,CONFIG_SLE_VERSION))
+ifneq (10,$(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
+	  grep -m 1 CONFIG_SLE_VERSION | awk '{ print $$3 }'))
 
-  CONFIG_LOCALVERSION := $(call get_config_value,CONFIG_LOCALVERSION)
-  LOCALVERSION := $(shell echo ${CONFIG_LOCALVERSION} | \
+  LOCALVERSION := $(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
+                    grep -m 1 CONFIG_LOCALVERSION | awk '{ print $$3 }' |\
                     cut -d'-' -f2 | sed 's/\.g[[:xdigit:]]\{7\}//')
   LOCALVER_A := $(shell echo ${LOCALVERSION} | cut -d'.' -f1)
   LOCALVER_B := $(shell echo ${LOCALVERSION} | cut -s -d'.' -f2)
@@ -227,7 +202,6 @@ ifneq (10,$(call get_config_value,CONFIG_SLE_VERSION))
   SLE_LOCALVERSION_CODE := $(shell expr ${LOCALVER_A} \* 65536 + \
                                         0${LOCALVER_B} \* 256 + 0${LOCALVER_C})
   EXTRA_CFLAGS += -DSLE_LOCALVERSION_CODE=${SLE_LOCALVERSION_CODE}
-  EXTRA_CFLAGS += -DSLE_KERNEL_REVISION=${LOCALVER_A}
 endif
 endif
 
@@ -303,8 +277,8 @@ endif
 # KBUILD_OUTPUT #
 #################
 
-# Only set KBUILD_OUTPUT if the real paths of KOBJ and KSRC differ
-ifneq ($(call readlink,${KSRC}),$(call readlink,${KOBJ}))
+# Only set KBUILD_OUTPUT if KOBJ differs from KSRC
+ifneq (${KSRC},${KOBJ})
 export KBUILD_OUTPUT ?= ${KOBJ}
 endif
 
@@ -317,44 +291,6 @@ endif
 # and extra afterwards. We use updates instead of kernel/* due to desire to
 # prevent over-writing built-in modules files.
 export INSTALL_MOD_DIR ?= updates/drivers/net/ethernet/intel/${DRIVER}
-
-#################
-# Auxiliary Bus #
-#################
-
-# If the check_aux_bus script exists, then this driver depends on the
-# auxiliary module. Run the script to determine if we need to include
-# auxiliary files with this build.
-ifneq ($(call test_file,../scripts/check_aux_bus),)
-NEED_AUX_BUS := $(shell ../scripts/check_aux_bus --ksrc="${KSRC}" --build-kernel="${BUILD_KERNEL}" >/dev/null 2>&1; echo $$?)
-endif # check_aux_bus exists
-
-# The out-of-tree auxiliary module we ship should be moved into this
-# directory as part of installation.
-export INSTALL_AUX_DIR ?= updates/drivers/net/ethernet/intel/auxiliary
-
-# If we're installing auxiliary bus out-of-tree, the following steps are
-# necessary to ensure the relevant files get put in place.
-ifeq (${NEED_AUX_BUS},2)
-define auxiliary_post_install
-	install -D -m 644 Module.symvers ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/Module.symvers
-	mv -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_MOD_DIR}/auxiliary.ko \
-	      ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/auxiliary.ko
-	install -D -m 644 linux/auxiliary_bus.h ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
-endef
-else
-auxiliary_post_install =
-endif
-
-ifeq (${NEED_AUX_BUS},2)
-define auxiliary_post_uninstall
-	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/Module.symvers
-	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/auxiliary.ko
-	rm -f ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
-endef
-else
-auxiliary_post_uninstall =
-endif
 
 ######################
 # Kernel Build Macro #
@@ -374,18 +310,10 @@ endif
 # EXTRA_CFLAGS -- a set of extra CFLAGS to pass into the ccflags-y variable
 # KSRC -- the location of the kernel source tree to build against
 # DRIVER_UPPERCASE -- the uppercase name of the kernel module, set from DRIVER
-# W -- if set, enables the W= kernel warnings options
-# C -- if set, enables the C= kernel sparse build options
 #
-kernelbuild = $(call warn_signed_modules) \
-              ${MAKE} $(if ${GCC_I_SYS},CC="${GCC_I_SYS}") \
+kernelbuild = ${MAKE} $(if ${GCC_I_SYS},CC="${GCC_I_SYS}") \
                       ${CCFLAGS_VAR}="${EXTRA_CFLAGS}" \
                       -C "${KSRC}" \
                       CONFIG_${DRIVER_UPPERCASE}=m \
-                      $(if ${DISABLE_MODULE_SIGNING},CONFIG_MODULE_SIG=n) \
-                      $(if ${DISABLE_MODULE_SIGNING},CONFIG_MODULE_SIG_ALL=) \
                       M="${CURDIR}" \
-                      $(if ${W},W="${W}") \
-                      $(if ${C},C="${C}") \
-                      $(if ${NEED_AUX_BUS},NEED_AUX_BUS="${NEED_AUX_BUS}") \
                       ${2} ${1}

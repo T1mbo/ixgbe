@@ -1,5 +1,26 @@
-/* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright(c) 1999 - 2021 Intel Corporation. */
+/*******************************************************************************
+
+  Intel(R) 10GbE PCI Express Linux Network Driver
+  Copyright(c) 1999 - 2017 Intel Corporation.
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Contact Information:
+  Linux NICS <linux.nics@intel.com>
+  e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
+  Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+
+*******************************************************************************/
 
 
 /* glue for the OS independent part of ixgbe
@@ -31,8 +52,22 @@
 
 #ifdef DBG
 #define ASSERT(_x)		BUG_ON(!(_x))
+#define DEBUGOUT(S)		printk(KERN_DEBUG S)
+#define DEBUGOUT1(S, A...)	printk(KERN_DEBUG S, ## A)
+#define DEBUGOUT2(S, A...)	printk(KERN_DEBUG S, ## A)
+#define DEBUGOUT3(S, A...)	printk(KERN_DEBUG S, ## A)
+#define DEBUGOUT4(S, A...)	printk(KERN_DEBUG S, ## A)
+#define DEBUGOUT5(S, A...)	printk(KERN_DEBUG S, ## A)
+#define DEBUGOUT6(S, A...)	printk(KERN_DEBUG S, ## A)
 #else
 #define ASSERT(_x)		do {} while (0)
+#define DEBUGOUT(S)		do {} while (0)
+#define DEBUGOUT1(S, A...)	do {} while (0)
+#define DEBUGOUT2(S, A...)	do {} while (0)
+#define DEBUGOUT3(S, A...)	do {} while (0)
+#define DEBUGOUT4(S, A...)	do {} while (0)
+#define DEBUGOUT5(S, A...)	do {} while (0)
+#define DEBUGOUT6(S, A...)	do {} while (0)
 #endif
 
 #define DEBUGFUNC(S)		do {} while (0)
@@ -46,13 +81,8 @@ struct ixgbe_msg {
 struct net_device *ixgbe_hw_to_netdev(const struct ixgbe_hw *hw);
 struct ixgbe_msg *ixgbe_hw_to_msg(const struct ixgbe_hw *hw);
 
-#ifdef DBG
 #define hw_dbg(hw, format, arg...) \
 	netdev_dbg(ixgbe_hw_to_netdev(hw), format, ## arg)
-#else
-#define hw_dbg(hw, format, arg...) do {} while (0)
-#endif
-
 #define hw_err(hw, format, arg...) \
 	netdev_err(ixgbe_hw_to_netdev(hw), format, ## arg)
 #define e_dev_info(format, arg...) \
@@ -77,7 +107,6 @@ struct ixgbe_msg *ixgbe_hw_to_msg(const struct ixgbe_hw *hw);
 #define IXGBE_DEAD_READ_RETRIES 10
 #define IXGBE_DEAD_READ_REG 0xdeadbeefU
 #define IXGBE_FAILED_READ_REG 0xffffffffU
-#define IXGBE_FAILED_READ_RETRIES 5
 #define IXGBE_FAILED_READ_CFG_DWORD 0xffffffffU
 #define IXGBE_FAILED_READ_CFG_WORD 0xffffU
 #define IXGBE_FAILED_READ_CFG_BYTE 0xffU
@@ -87,7 +116,6 @@ struct ixgbe_msg *ixgbe_hw_to_msg(const struct ixgbe_hw *hw);
 
 #define IXGBE_READ_REG(h, r) ixgbe_read_reg(h, r, false)
 #define IXGBE_R32_Q(h, r) ixgbe_read_reg(h, r, true)
-#define IXGBE_R8_Q(h, r) readb(READ_ONCE(h->hw_addr) + r)
 
 #define IXGBE_READ_REG_ARRAY(a, reg, offset) ( \
 	IXGBE_READ_REG((a), (reg) + ((offset) << 2)))
@@ -103,7 +131,7 @@ struct ixgbe_msg *ixgbe_hw_to_msg(const struct ixgbe_hw *hw);
 u32 ixgbe_read_reg(struct ixgbe_hw *, u32 reg, bool quiet);
 extern u16 ixgbe_read_pci_cfg_word(struct ixgbe_hw *hw, u32 reg);
 extern void ixgbe_write_pci_cfg_word(struct ixgbe_hw *hw, u32 reg, u16 value);
-extern void ewarn(struct ixgbe_hw *hw, const char *str);
+extern void ewarn(struct ixgbe_hw *hw, const char *str, u32 status);
 
 #define IXGBE_READ_PCIE_WORD ixgbe_read_pci_cfg_word
 #define IXGBE_WRITE_PCIE_WORD ixgbe_write_pci_cfg_word
@@ -115,7 +143,7 @@ extern void ewarn(struct ixgbe_hw *hw, const char *str);
 #define IXGBE_CPU_TO_LE16(_i) cpu_to_le16(_i)
 #define IXGBE_LE32_TO_CPU(_i) le32_to_cpu(_i)
 #define IXGBE_LE32_TO_CPUS(_i) le32_to_cpus(_i)
-#define EWARN(H, W) ewarn(H, W)
+#define EWARN(H, W, S) ewarn(H, W, S)
 
 enum {
 	IXGBE_ERROR_SOFTWARE,

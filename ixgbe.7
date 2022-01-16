@@ -5,7 +5,7 @@
 .\" * Other names and brands may be claimed as the property of others.
 .\"
 .
-.TH ixgbe 1 "April 16, 2021"
+.TH ixgbe 1 "March 29, 2016"
 .SH NAME
 ixgbe \-This file describes the Linux* Base Driver
 for the 10 Gigabit Family of Adapters.
@@ -14,11 +14,19 @@ for the 10 Gigabit Family of Adapters.
 modprobe ixgbe [<option>=<VAL1>,<VAL2>,...]
 .PD 1v
 .SH DESCRIPTION
-This driver is intended for \fB2.6.x\fR or later kernels. A version of the driver may already be included by your distribution and/or the kernel.org kernel.
+This driver is intended for \fB2.6.x\fR or later kernels. 
+This driver includes support for any 64 bit Linux supported system, 
+including Itanium(R)2, x86_64, PPC64,ARM, etc.
 
-This driver includes support for any 64 bit Linux supported system, x86_64, PPC64, ARM, etc.
 .LP
-This driver is only supported as a loadable module at this time. Intel is not supplying patches against the kernel source to allow for static linking of the drivers.
+This driver is only supported as a loadable module at this time. Intel is
+not supplying patches against the kernel source to allow for static linking of
+the drivers.
+
+A version of the driver may already be included by your
+distribution and/or the kernel.org kernel.
+
+
 
 
 For questions related to hardware requirements, refer to the documentation
@@ -38,10 +46,10 @@ modprobe ixgbe InterruptThrottleRate=16000,16000
 0 = Assign up to the lesser value of the number of CPUs or the number of queues
 .IP
 X = Assign X queues, where X is less than or equal to the maximum number of
-queues (16 queues).
+queues (16 queues). 
 .IP
 .IP
-RSS also affects the number of transmit queues allocated on 2.6.23 and
+RSS also effects the number of transmit queues allocated on 2.6.23 and
 newer kernels with CONFIG_NETDEVICES_MULTIQUEUE set in the kernel .config file.
 CONFIG_NETDEVICES_MULTIQUEUE only exists from 2.6.23 to 2.6.26. Other options
 enable multiqueue in 2.6.27 and newer kernels.
@@ -63,7 +71,8 @@ enable multiqueue in 2.6.27 and newer kernels.
 .IP
 1 = Enables DCA support in the driver
 .IP
-If the driver is enabled for DCA, this parameter allows load-time control of the feature.
+If the driver is enabled for DCA, this parameter allows load-time control of
+the feature.
 .IP
 Note: DCA is not supported on X550-based adapters.
 .LP
@@ -71,7 +80,7 @@ Note: DCA is not supported on X550-based adapters.
 .IP
 .B Valid Range: 0-2 (0 = Legacy Int, 1 = MSI and 2 = MSI-X)
 .IP
-IntMode controls the allowed load time control over the type of interrupt
+IntMode controls allow load time control over the type of interrupt
 registered for by the driver. MSI-X is required for multiple queue
 support, and some kernels and combinations of kernel .config options
 will force a lower level of interrupt support.
@@ -178,6 +187,12 @@ packet sample rate. For example, when AtrSampleRate is set to 20, every 20th
 packet looks to see if the packet will create a new flow. A value of 0
 indicates that ATR should be disabled and no samples will be taken.
 .LP
+.B L2LBen
+.B Valid Range: 0 (disabled), 1 (enabled)
+.IP
+This parameter controls the internal switch (L2 loopback between pf and vf).
+By default the switch is enabled.
+.LP
 .B LRO
 .IP
 .B Valid Range: 0(off), 1(on)
@@ -189,10 +204,11 @@ the number of packets that have to be processed. LRO combines multiple
 Ethernet frames into a single receive in the stack, thereby potentially
 decreasing CPU utilization for receives.
 This technique is also referred to as Hardware Receive Side Coalescing
-(HW RSC). 82599, X540, and X550-based adapters support HW RSC. The
+(HW RSC). 82599 and X540, and X550-based adapters support HW RSC. The
 LRO parameter controls HW RSC enablement.
 .IP
-You can verify that the driver is using LRO by looking at these counters in ethtool:
+You can verify that the driver is using LRO by looking at these counters in
+ethtool:
 .LP
 - hw_rsc_aggregated - counts total packets that were combined
 .LP
@@ -211,36 +227,40 @@ NOTE: IPv6 and UDP are not supported by LRO.
 This parameter is only relevant for devices operating in SR-IOV mode.
 When this parameter is set, the driver detects malicious VF driver and
 disables its Tx/Rx queues until a VF driver reset occurs.
+.SH Jumbo Frames
 .LP
-.B Jumbo Frames
-.IP
-Jumbo Frames support is enabled by changing the Maximum Transmission Unit (MTU) to a value larger than the default value of 1500.
+Jumbo Frames support is enabled by changing the Maximum Transmission Unit
+(MTU) to a value larger than the default value of 1500.
 
-.IP
-Use the ip command to increase the MTU size. For example, enter the following where <ethX> is the interface number:
+Use the ifconfig command to increase the MTU size. For example, enter the
+following where <x> is the interface number:
 
-.IP
-# ip link set mtu 9000 dev <ethX>
-.IP
-# ip link set up dev <ethX>
+   ifconfig eth<x> mtu 9000 up
 
 .LP
-NOTE: The maximum MTU setting for jumbo frames is 9710. This corresponds to the maximum jumbo frame size of 9728 bytes.
+NOTES:
+- The maximum MTU setting for Jumbo Frames is 9710. This value coincides
+  with the maximum Jumbo Frames size of 9728 bytes.
+- This driver will attempt to use multiple page sized buffers to receive
+  each jumbo packet. This should help to avoid buffer starvation issues
+  when allocating receive packets.
 
-NOTE: This driver will attempt to use multiple page sized buffers to receive each jumbo packet. This should help to avoid buffer starvation issues when allocating receive packets.
+- For 82599-based network connections, if you are enabling jumbo frames in a
+  virtual function (VF), jumbo frames must first be enabled in the physical
+  function (PF). The VF MTU setting cannot be larger than the PF MTU.
 
-NOTE: Packet loss may have a greater impact on throughput when you use jumbo frames. If you observe a drop in performance after enabling jumbo frames, enabling flow control may mitigate the issue.
-
-NOTE: For 82599-based network connections, if you are enabling jumbo frames in a virtual function (VF), jumbo frames must first be enabled in the physical function (PF). The VF MTU setting cannot be larger than the PF MTU.
 See the section "Jumbo Frames" in the Readme.
 .SH SUPPORT
 .LP
-For additional information regarding building and installation, see the
+For additional information regarding building and installation,
+see the
 README
 included with the driver.
 For general information, go to the Intel support website at:
-.B http://www.intel.com/support/
-
+.B www.intel.com/support/
 .LP
-If an issue is identified with the released source code on a supported kernel with a supported adapter, email the specific information related to the issue to e1000-devel@lists.sf.net.
+If an issue is identified with the released source code on a supported
+kernel with a supported adapter, email the specific information related to the
+issue to e1000-devel@lists.sf.net.
+
 .LP

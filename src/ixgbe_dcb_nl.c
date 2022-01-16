@@ -1,5 +1,26 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2021 Intel Corporation. */
+/*******************************************************************************
+
+  Intel(R) 10GbE PCI Express Linux Network Driver
+  Copyright(c) 1999 - 2017 Intel Corporation.
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Contact Information:
+  Linux NICS <linux.nics@intel.com>
+  e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
+  Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+
+*******************************************************************************/
 
 #include "ixgbe.h"
 
@@ -171,11 +192,6 @@ static void ixgbe_dcbnl_set_pg_tc_cfg_tx(struct net_device *netdev, int tc,
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 
-	if (tc < 0 || tc >= IXGBE_DCB_MAX_TRAFFIC_CLASS) {
-		netdev_err(netdev, "Traffic class out of range.\n");
-		return;
-	}
-
 	if (prio != DCB_ATTR_VALUE_UNDEFINED)
 		adapter->temp_dcb_cfg.tc_config[tc].path[0].tsa = prio;
 	if (bwg_id != DCB_ATTR_VALUE_UNDEFINED)
@@ -193,12 +209,6 @@ static void ixgbe_dcbnl_set_pg_bwg_cfg_tx(struct net_device *netdev, int bwg_id,
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 
-	if (bwg_id < 0 || bwg_id >= IXGBE_DCB_MAX_BW_GROUP) {
-		netdev_err(netdev,
-			   "BWG index out of range.\n");
-		return;
-	}
-
 	adapter->temp_dcb_cfg.bw_percentage[0][bwg_id] = bw_pct;
 }
 
@@ -207,11 +217,6 @@ static void ixgbe_dcbnl_set_pg_tc_cfg_rx(struct net_device *netdev, int tc,
 					 u8 up_map)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
-
-	if (tc < 0 || tc >= IXGBE_DCB_MAX_TRAFFIC_CLASS) {
-		netdev_err(netdev, "Traffic class out of range.\n");
-		return;
-	}
 
 	if (prio != DCB_ATTR_VALUE_UNDEFINED)
 		adapter->temp_dcb_cfg.tc_config[tc].path[1].tsa = prio;
@@ -229,12 +234,6 @@ static void ixgbe_dcbnl_set_pg_bwg_cfg_rx(struct net_device *netdev, int bwg_id,
 					  u8 bw_pct)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
-
-	if (bwg_id < 0 || bwg_id >= IXGBE_DCB_MAX_BW_GROUP) {
-		netdev_err(netdev,
-			   "BWG index out of range.\n");
-		return;
-	}
 
 	adapter->temp_dcb_cfg.bw_percentage[1][bwg_id] = bw_pct;
 }
@@ -379,13 +378,13 @@ static u8 ixgbe_dcbnl_set_all(struct net_device *netdev)
 			hw->mac.ops.fc_enable(hw);
 		}
 		/* This is known driver so disable MDD before updating SRRCTL */
-		if (hw->mac.ops.disable_mdd &&
+		if ((adapter->num_vfs) && (hw->mac.ops.disable_mdd) &&
 		    (adapter->flags & IXGBE_FLAG_MDD_ENABLED))
 			hw->mac.ops.disable_mdd(hw);
 
 		ixgbe_set_rx_drop_en(adapter);
 
-		if (hw->mac.ops.enable_mdd &&
+		if ((adapter->num_vfs) && (hw->mac.ops.enable_mdd) &&
 		    (adapter->flags & IXGBE_FLAG_MDD_ENABLED))
 			hw->mac.ops.enable_mdd(hw);
 
@@ -566,8 +565,8 @@ static u8 ixgbe_dcbnl_getapp(struct net_device *netdev, u8 idtype, u16 id)
 
 /**
  * ixgbe_dcbnl_setapp - set the DCBX application user priority
- * @netdev: the corresponding netdev
- * @idtype: identifies the id as ether type or TCP/UDP port number
+ * @netdev : the corresponding netdev
+ * @idtype : identifies the id as ether type or TCP/UDP port number
  * @id: id is either ether type or TCP/UDP port number
  * @up: the 802.1p user priority bitmap
  *
@@ -575,11 +574,10 @@ static u8 ixgbe_dcbnl_getapp(struct net_device *netdev, u8 idtype, u16 id)
  */
 #ifdef HAVE_DCBNL_OPS_SETAPP_RETURN_INT
 static int ixgbe_dcbnl_setapp(struct net_device *netdev,
-			      u8 idtype, u16 id, u8 up)
 #else
 static u8 ixgbe_dcbnl_setapp(struct net_device *netdev,
-			     u8 idtype, u16 id, u8 up)
 #endif
+			     u8 idtype, u16 id, u8 up)
 {
 	int err = 0;
 #ifdef HAVE_DCBNL_IEEE
@@ -739,13 +737,13 @@ static int ixgbe_dcbnl_ieee_setpfc(struct net_device *dev,
 		err = hw->mac.ops.fc_enable(hw);
 
 	/* This is known driver so disable MDD before updating SRRCTL */
-	if (hw->mac.ops.disable_mdd &&
+	if ((adapter->num_vfs) && (hw->mac.ops.disable_mdd) &&
 	    (adapter->flags & IXGBE_FLAG_MDD_ENABLED))
 		hw->mac.ops.disable_mdd(hw);
 
 	ixgbe_set_rx_drop_en(adapter);
 
-	if (hw->mac.ops.enable_mdd &&
+	if ((adapter->num_vfs) && (hw->mac.ops.enable_mdd) &&
 	    (adapter->flags & IXGBE_FLAG_MDD_ENABLED))
 		hw->mac.ops.enable_mdd(hw);
 
@@ -857,7 +855,7 @@ static u8 ixgbe_dcbnl_setdcbx(struct net_device *dev, u8 mode)
 
 #endif
 
-struct dcbnl_rtnl_ops ixgbe_dcbnl_ops = {
+struct dcbnl_rtnl_ops dcbnl_ops = {
 #ifdef HAVE_DCBNL_IEEE
 	.ieee_getets	= ixgbe_dcbnl_ieee_getets,
 	.ieee_setets	= ixgbe_dcbnl_ieee_setets,
